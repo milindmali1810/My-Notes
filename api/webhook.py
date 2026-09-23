@@ -1,7 +1,8 @@
 """Stage 1 (TRIGGER), deployed variant. Telegram calls this URL directly
 (POST) with each new update — see README.md for how the webhook gets
 registered. Runs stages 2-6 via pipeline/orchestrator.py, same logic as the
-local polling entry point (main.py).
+local polling entry point (main.py). Also handles APPROVE/REJECT replies in
+the review chat (stage 6b, MEMORY).
 """
 import os
 import sys
@@ -11,8 +12,9 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from flask import Flask, request  # noqa: E402
 
+import config  # noqa: E402
 from pipeline import telegram_client  # noqa: E402
-from pipeline.orchestrator import process_fragment  # noqa: E402
+from pipeline.orchestrator import process_fragment, process_review_reply  # noqa: E402
 
 app = Flask(__name__)
 
@@ -30,13 +32,19 @@ def telegram_webhook():
         return "forbidden", 403
 
     update = request.get_json(silent=True) or {}
+
     post = update.get("channel_post")
-    if not post:
-        return "", 200  # not a channel post (e.g. edited_channel_post, other chat types) — ignore
+    if post:
+        message = telegram_client.parse_channel_post(post)
+        if message:
+            process_fragment(message)
+        return "", 200
 
-    message = telegram_client.parse_channel_post(post)
-    if not message:
-        return "", 200  # different chat, or unsupported content type — ignore
+    msg = update.get("message")
+    if msg and str(msg.get("chat", {}).get("id")) == str(config.TELEGRAM_REVIEW_CHAT_ID):
+        reply_to = msg.get("reply_to_message")
+        if reply_to and "text" in msg:
+            process_review_reply(reply_to["message_id"], msg["text"])
+        return "", 200
 
-    process_fragment(message)
-    return "", 200
+    return "", 200  # anything else (edited posts, other chats, etc.) — ignore

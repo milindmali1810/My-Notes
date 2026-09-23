@@ -17,6 +17,11 @@ GEMINI_API_KEY = os.environ["GEMINI_API_KEY"]
 FILTER_MODEL = os.environ.get("FILTER_MODEL", "gemini-flash-latest")
 DRAFTING_MODEL = os.environ.get("DRAFTING_MODEL", "gemini-pro-latest")
 
+SUPABASE_URL = os.environ["SUPABASE_URL"]
+SUPABASE_KEY = os.environ["SUPABASE_KEY"]
+
+SCORE_PASS_THRESHOLD = 6
+
 PROJECT_DIR = Path(__file__).parent
 
 # Local runs read the live external file so edits take effect immediately.

@@ -12,28 +12,31 @@ def send_voice_notice(fragment: dict) -> None:
 
 def send_rejection(fragment: dict, verdict: dict) -> None:
     telegram_client.send_review_message(
-        "NOT POST-WORTHY\n\n"
+        "NO DRAFT — didn't clear the bar\n\n"
         f"Fragment: {fragment['text']}\n\n"
+        f"Score: {verdict['score']}/10\n"
         f"Reason: {verdict['reason']}"
     )
 
 
-def send_draft(fragment: dict, claim: str, context: dict, draft: dict) -> None:
+def send_draft(fragment: dict, claim: str, context: dict, draft: dict) -> int | None:
+    """Returns the sent Telegram message id, so it can be linked to the
+    drafts row for matching a later APPROVE/REJECT reply."""
     lines = [
         "DRAFT READY FOR REVIEW",
         "",
         f"Fragment: {fragment['text']}",
         f"Claim: {claim}",
     ]
-    if context.get("data_point"):
-        lines.append(f"Context used: {context['data_point']}")
-    else:
-        lines.append("Context used: none found")
+    news = context.get("news")
+    lines.append(f"News angle used: {news['headline']}" if news and draft.get("used_news") else "News angle used: none")
     if draft.get("tone_tension_flag"):
         lines.append("")
         lines.append(f"⚠ VOICE/CONTENT TENSION: {draft['tone_tension_note']}")
     lines.append("")
     lines.append("---")
     lines.append(draft["draft"])
+    lines.append("")
+    lines.append("Reply APPROVE or REJECT to this message to record your decision.")
 
-    telegram_client.send_review_message("\n".join(lines))
+    return telegram_client.send_review_message("\n".join(lines))

@@ -70,18 +70,21 @@ def fetch_new_channel_messages() -> list[dict]:
     return messages
 
 
-def send_review_message(text: str) -> None:
+def send_review_message(text: str) -> int | None:
     """Stage 6 (OUTPUT) — DM the review chat. Never touches LinkedIn or the source channel.
 
     Sent as plain text (no parse_mode): drafts can contain characters like
     * _ [ ] that would otherwise trip Telegram's Markdown parser and fail
-    the send.
+    the send. Returns the sent message's id (needed to match a later
+    APPROVE/REJECT reply back to this draft), or None if it wasn't sent.
     """
     if not config.TELEGRAM_REVIEW_CHAT_ID:
         print(f"[TELEGRAM_REVIEW_CHAT_ID not set, would have sent]\n{text}")
-        return
-    requests.post(
+        return None
+    resp = requests.post(
         f"{API_BASE}/sendMessage",
         json={"chat_id": config.TELEGRAM_REVIEW_CHAT_ID, "text": text},
         timeout=30,
-    ).raise_for_status()
+    )
+    resp.raise_for_status()
+    return resp.json()["result"]["message_id"]

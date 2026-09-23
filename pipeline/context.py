@@ -1,12 +1,16 @@
-"""Stage 3 (CONTEXT) — pull skill.txt voice guidance and a live, current data point.
+"""Stage 3 (CONTEXT) — pull skill.txt voice guidance and a live news angle.
 
 Two independent lookups, both gathered before any drafting is attempted:
   a) skill.txt — read fresh every run, never cached, so edits take effect immediately.
-  b) A live web search for a current data point or news angle related to the
-     fragment's topic, using Gemini's built-in Google Search grounding. If
-     nothing relevant and recent turns up, that is recorded explicitly rather
-     than forcing a connection in the draft stage.
+  b) a relevant, current news item related to the note's topic: Gemini extracts
+     3-5 search keywords, those keywords hit Google News' public RSS search
+     (no account or API key needed), and the top result is returned as a
+     structured item. If nothing comes back, that's recorded explicitly
+     rather than forcing a connection in the draft stage.
 """
+import xml.etree.ElementTree as ET
+
+import requests
 from google import genai
 from google.genai import types
 
@@ -14,42 +18,60 @@ import config
 
 _client = genai.Client(api_key=config.GEMINI_API_KEY)
 
-_SEARCH_SYSTEM_PROMPT = """You are a research assistant supporting a LinkedIn ghostwriter.
-Given a raw note fragment, decide if there is a genuinely relevant, CURRENT
-(recent) data point, statistic, or news item that connects to its topic.
-
-Rules:
-- Only report something if it is specifically relevant, not a generic tie-in.
-- Prefer recent (last few months) sources; cite where it came from.
-- If nothing relevant and recent turns up after searching, say so plainly:
-  reply with exactly "NO_RELEVANT_CONTEXT_FOUND" and nothing else.
-- Otherwise reply with 2-4 sentences: the data point/angle plus its source,
-  no fluff, no "in today's fast-paced world" framing.
+_KEYWORD_SYSTEM_PROMPT = """Given a note fragment, extract 3-5 search keywords that would
+find a relevant, current news article on the same topic. Reply with ONLY a
+short search phrase (the keywords separated by spaces), no other text, no
+quotes, no explanation.
 """
+
+_NEWS_RSS_URL = "https://news.google.com/rss/search"
 
 
 def read_skill_file() -> str:
     return config.SKILL_PATH.read_text(encoding="utf-8")
 
 
-def find_current_data_point(fragment_text: str) -> str | None:
+def extract_keywords(fragment_text: str) -> str:
     response = _client.models.generate_content(
-        model=config.DRAFTING_MODEL,
-        contents=f"Note fragment:\n\n{fragment_text}",
-        config=types.GenerateContentConfig(
-            system_instruction=_SEARCH_SYSTEM_PROMPT,
-            tools=[types.Tool(google_search=types.GoogleSearch())],
-        ),
+        model=config.FILTER_MODEL,
+        contents=fragment_text,
+        config=types.GenerateContentConfig(system_instruction=_KEYWORD_SYSTEM_PROMPT),
     )
-    result = (response.text or "").strip()
+    return (response.text or "").strip()
 
-    if not result or "NO_RELEVANT_CONTEXT_FOUND" in result:
+
+def fetch_top_news(search_phrase: str) -> dict | None:
+    if not search_phrase:
         return None
-    return result
+    resp = requests.get(
+        _NEWS_RSS_URL,
+        params={"q": search_phrase, "hl": "en-US", "gl": "US", "ceid": "US:en"},
+        timeout=15,
+    )
+    resp.raise_for_status()
+    root = ET.fromstring(resp.content)
+    item = root.find("./channel/item")
+    if item is None:
+        return None
+
+    raw_title = (item.findtext("title") or "").strip()
+    # Google News RSS titles are formatted "Headline - Source Name"
+    if " - " in raw_title:
+        headline, source = raw_title.rsplit(" - ", 1)
+    else:
+        headline, source = raw_title, "Google News"
+
+    return {
+        "headline": headline.strip(),
+        "source": source.strip(),
+        "date": (item.findtext("pubDate") or "").strip(),
+        "url": (item.findtext("link") or "").strip(),
+    }
 
 
 def gather_context(fragment_text: str) -> dict:
+    keywords = extract_keywords(fragment_text)
     return {
         "skill_reference": read_skill_file(),
-        "data_point": find_current_data_point(fragment_text),
+        "news": fetch_top_news(keywords),
     }

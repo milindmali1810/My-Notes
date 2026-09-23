@@ -3,12 +3,16 @@
 Drafts a LinkedIn post that:
   (a) matches skill.txt's voice (structure + lexical tics, per skill.txt itself)
   (b) is built around the fragment's specific claim, not a generic restatement
-  (c) weaves in the stage-3 data point as supporting context, not a bolted-on
-      intro line — and is skipped entirely if stage 3 found nothing relevant
+  (c) uses the stage-3 news item as supporting context ONLY if it's genuinely
+      relevant — the model decides and reports whether it used it
 
 Also checks for tension between skill.txt's voice and the fragment's actual
 register (e.g. a rough unfiltered rant vs. a clinical/measured skill.txt) and
 flags it instead of silently smoothing it away.
+
+Whenever a news item is used, a verify-flag footer is appended in code (not
+by the model) using the source's actual headline/date/link, so nothing about
+the citation can be hallucinated.
 """
 import json
 
@@ -31,12 +35,12 @@ instructions about which parts of a corpus constitute "voice" vs "content":
 Ground rules:
 - The post must be built AROUND the fragment's specific claim/number/observation,
   not a vague restatement of it.
-- If a current data point is supplied, weave it in as supporting context for
-  the claim — not as a bolted-on "Did you know..." intro line.
-- If no data point is supplied, do not invent one. Write the post on the
-  fragment's claim alone.
+- A candidate news item may be supplied below. If it is genuinely relevant, use
+  it to make the post timely, woven in as supporting context — not as a
+  bolted-on "Did you know..." intro line. If it doesn't fit naturally, ignore
+  it entirely. Report which you did via used_news.
 - Never invent numbers, statistics, or specifics not present in the fragment
-  or the supplied data point.
+  or the supplied news item.
 - Separately: compare the fragment's raw tone/register against skill.txt's
   voice. If the fragment is markedly rougher, angrier, or more unfiltered
   than skill.txt's typical register (e.g. a rant vs. a clinical/measured
@@ -44,19 +48,27 @@ Ground rules:
   flag the tension explicitly instead.
 
 Reply with ONLY a JSON object, no other text:
-{{"draft": "the full LinkedIn post text", "tone_tension_flag": true|false, "tone_tension_note": "explanation if flagged, else null"}}
+{{"draft": "the full LinkedIn post text", "used_news": true|false, "tone_tension_flag": true|false, "tone_tension_note": "explanation if flagged, else null"}}
 """
+
+_VERIFY_FOOTER = """
+---
+NEWS SOURCE: {headline}
+FROM: {source} · {date}
+LINK: {url}
+⚠ Check this before publishing — you are the author of this claim
+---"""
 
 
 def write_draft(fragment_text: str, claim: str, context: dict) -> dict:
     system = _SYSTEM_PROMPT.format(skill_text=context["skill_reference"])
-    data_point = context.get("data_point")
+    news = context.get("news")
 
     user_content = f"Fragment:\n{fragment_text}\n\nSpecific claim to build around:\n{claim}\n\n"
     user_content += (
-        f"Current data point/news angle to weave in as support:\n{data_point}"
-        if data_point
-        else "No relevant current data point was found — write on the claim alone."
+        f"Candidate news item:\nHeadline: {news['headline']}\nSource: {news['source']} ({news['date']})\n"
+        if news
+        else "No relevant news item was found — write on the claim alone."
     )
 
     response = _client.models.generate_content(
@@ -69,6 +81,16 @@ def write_draft(fragment_text: str, claim: str, context: dict) -> dict:
     )
     raw = (response.text or "").strip()
     try:
-        return json.loads(raw)
+        result = json.loads(raw)
     except json.JSONDecodeError:
-        return {"draft": raw, "tone_tension_flag": False, "tone_tension_note": "draft output was not valid JSON, showing raw text"}
+        return {"draft": raw, "used_news": False, "tone_tension_flag": False, "tone_tension_note": "draft output was not valid JSON, showing raw text"}
+
+    # This footer is mandatory whenever news was used, per the case's
+    # requirement that nothing gets published in Meera's name unverified —
+    # built here from the real fetched data, never from the model's own text.
+    if result.get("used_news") and news:
+        result["draft"] = result["draft"].rstrip() + _VERIFY_FOOTER.format(**news)
+    else:
+        result["used_news"] = False
+
+    return result

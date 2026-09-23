@@ -1,0 +1,96 @@
+SKILL: Founder Voice Extraction & Transfer
+================================================================
+Purpose: Given a corpus of a founder's writing, extract their voice
+as a reusable set of rules, then apply those rules to write NEW
+content (different topic, different data) that reads as if that
+same person wrote it.
+
+--------------------------------------------------------------
+STEP 1 — READ THE FULL CORPUS BEFORE EXTRACTING ANYTHING
+--------------------------------------------------------------
+Do not extract voice from a summary, a single post, or memory of
+"how this type of person usually writes." Read every piece in the
+sample. Voice patterns that appear once are noise; patterns that
+repeat 3+ times across different pieces are signal.
+
+--------------------------------------------------------------
+STEP 2 — EXTRACT STRUCTURE (macro level)
+--------------------------------------------------------------
+For each piece, note:
+- What is the opening move? (scene, claim, question, confession)
+- Where does the thesis land — first line or several paragraphs in?
+- How does it close? (resolution, open question, deflection,
+  call to action)
+- What's the paragraph rhythm — short and stacked, or long and
+  discursive?
+
+--------------------------------------------------------------
+STEP 3 — EXTRACT LEXICAL TICS (micro level)
+--------------------------------------------------------------
+Pull VERBATIM recurring phrases and sentence templates, not
+paraphrases of them. Examples of the kind of thing to look for:
+- Hedging phrases used before a strong claim
+  ("I want to be precise about...")
+- Self-correction or reframing structures
+  ("I'm not saying X. I'm saying Y.")
+- How they handle numbers — bare, or always paired with a
+  comparison/benchmark?
+- How they close — question aimed at the reader, or question the
+  writer admits is still open for themselves?
+- Sentence length pattern at moments of emphasis (short flat
+  fragments vs. longer qualified sentences)
+- Any recurring self-deprecating or narrative-deflating move
+  ("this is not a particularly inspiring story")
+
+--------------------------------------------------------------
+STEP 4 — SEPARATE VOICE FROM CONTENT
+--------------------------------------------------------------
+Voice = the mechanics above. Content = the specific facts, numbers,
+and story of the ORIGINAL corpus. When transferring voice to new
+material, only Steps 2 and 3 travel. Never let details from the
+original person's story (their numbers, their history, their
+product facts) leak into the new piece.
+
+--------------------------------------------------------------
+STEP 5 — APPLY TO NEW MATERIAL
+--------------------------------------------------------------
+Write the new piece using:
+- The new person's REAL data and facts (never invent specifics —
+  a fabricated number or unverified detail breaks the voice-transfer
+  exercise even if it "sounds right," because precision without
+  actually verifying it is the opposite of what most rigorous
+  founder voices are built on)
+- The extracted structural pattern from Step 2
+- The extracted lexical patterns from Step 3, used at the same
+  rate/density they appeared in the original corpus — not more,
+  not less
+
+--------------------------------------------------------------
+STEP 6 — VERIFY BEFORE DELIVERING
+--------------------------------------------------------------
+Check the output against the checklist:
+[ ] Does the opening move match the extracted pattern (not just
+    "some conflict"), specifically?
+[ ] Are lexical tics present verbatim/near-verbatim, at a natural
+    density, not forced into every paragraph?
+[ ] Does every number in the piece belong to the person it's about,
+    verified — not invented to sound like the source voice?
+[ ] Does the ending match the extracted closing pattern precisely
+    (e.g., an unresolved question owned by the writer, not a
+    rhetorical hook)?
+[ ] Would someone who has read the source corpus recognize the
+    voice without being told?
+
+--------------------------------------------------------------
+COMMON FAILURE MODES
+--------------------------------------------------------------
+- Mimicking tone/mood ("confident," "vulnerable") instead of
+  mimicking specific, repeatable sentence structures.
+- Borrowing structure only (scene-open, question-close) while
+  skipping the lexical tics — produces something "in the spirit of"
+  the voice but not actually in it.
+- Inventing specificity (exact percentages, channel breakdowns) to
+  match the source's habit of precision, without confirming the
+  new person's real numbers. This is the single most common failure
+  — it looks like fidelity to the voice but is actually a fabrication
+  the source person's own rigor would never have allowed.

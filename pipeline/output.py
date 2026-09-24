@@ -13,12 +13,23 @@ def send_voice_notice(fragment: dict) -> None:
 def _sources_message(news: dict, used: dict | None, unused_note: str) -> str:
     items = news.get("news_items") or []
     if not items:
+        checked = news.get("candidates_checked", 0)
+        if checked:
+            return (
+                f'SOURCES: none relevant enough. Google News search "{news.get("search_phrase")}" '
+                f"returned {checked} results, and all were dropped as off-topic for your note."
+            )
         return "SOURCES: none found."
 
     lines = [f'SOURCES CONSIDERED (Google News, search: "{news.get("search_phrase")}")', ""]
     for i, item in enumerate(items, 1):
         tag = "  [USED IN DRAFT]" if item is used else ""
-        lines += [f"{i}. {item['headline']}", f"   {item['source']}, {item['date']}{tag}", f"   {item['url']}", ""]
+        lines += [
+            f"{i}. {item['headline']}",
+            f"   {item['source']}, {item['date']}  (relevance {item['relevance']}/10){tag}",
+            f"   {item['url']}",
+            "",
+        ]
     if not used:
         lines.append(unused_note)
     return "\n".join(lines).rstrip()

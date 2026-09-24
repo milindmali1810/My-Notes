@@ -70,21 +70,47 @@ def fetch_new_channel_messages() -> list[dict]:
     return messages
 
 
+def _split_for_telegram(text: str, limit: int = 4000) -> list[str]:
+    """Telegram rejects messages over 4096 characters, which would fail the
+    webhook and make Telegram retry the update. Split on line breaks instead."""
+    chunks, current = [], ""
+    for line in text.split("\n"):
+        while len(line) > limit:
+            if current:
+                chunks.append(current)
+                current = ""
+            chunks.append(line[:limit])
+            line = line[limit:]
+        if current and len(current) + len(line) + 1 > limit:
+            chunks.append(current)
+            current = line
+        else:
+            current = f"{current}\n{line}" if current else line
+    if current:
+        chunks.append(current)
+    return chunks
+
+
 def send_review_message(text: str) -> int | None:
     """Stage 6 (OUTPUT) — DM the review chat. Never touches LinkedIn or the source channel.
 
     Sent as plain text (no parse_mode): drafts can contain characters like
     * _ [ ] that would otherwise trip Telegram's Markdown parser and fail
-    the send. Returns the sent message's id (needed to match a later
-    APPROVE/REJECT reply back to this draft), or None if it wasn't sent.
+    the send. Returns the id of the last message sent (needed to match a later
+    APPROVE/REJECT reply back to this draft; the reply instruction sits at the
+    end of the text, so it lands in that last message), or None if nothing
+    was sent.
     """
     if not config.TELEGRAM_REVIEW_CHAT_ID:
         print(f"[TELEGRAM_REVIEW_CHAT_ID not set, would have sent]\n{text}")
         return None
-    resp = requests.post(
-        f"{API_BASE}/sendMessage",
-        json={"chat_id": config.TELEGRAM_REVIEW_CHAT_ID, "text": text},
-        timeout=30,
-    )
-    resp.raise_for_status()
-    return resp.json()["result"]["message_id"]
+    message_id = None
+    for chunk in _split_for_telegram(text):
+        resp = requests.post(
+            f"{API_BASE}/sendMessage",
+            json={"chat_id": config.TELEGRAM_REVIEW_CHAT_ID, "text": chunk},
+            timeout=30,
+        )
+        resp.raise_for_status()
+        message_id = resp.json()["result"]["message_id"]
+    return message_id

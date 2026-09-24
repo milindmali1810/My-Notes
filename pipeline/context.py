@@ -76,10 +76,10 @@ def fetch_news(search_phrase: str, limit: int = 5) -> list[dict]:
     return items
 
 
-def gather_context(fragment_text: str) -> dict:
+def find_news(fragment_text: str) -> dict:
     keywords = extract_keywords(fragment_text)
-    return {
-        "skill_reference": read_skill_file(),
-        "search_phrase": keywords,
-        "news_items": fetch_news(keywords),
-    }
+    return {"search_phrase": keywords, "news_items": fetch_news(keywords)}
+
+
+def gather_context(news: dict) -> dict:
+    return {"skill_reference": read_skill_file(), **news}

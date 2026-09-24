@@ -16,13 +16,21 @@ def process_fragment(message: dict) -> None:
     # Stage 4 — PROCESSING: score before any drafting is attempted
     verdict = filter_stage.score_fragment(fragment["text"])
     db.update_note_scored(note_id, verdict)
+
+    # Stage 3 — CONTEXT (news): runs for every note, so even a rejection shows what was found
+    try:
+        news = context.find_news(fragment["text"])
+    except Exception as exc:
+        print(f"[news lookup failed] {exc}")
+        news = {"search_phrase": "", "news_items": []}
+
     if not verdict["passed"]:
-        output.send_rejection(fragment, verdict)
+        output.send_rejection(fragment, verdict, news)
         print(f"[reject] message_id={fragment['message_id']}: score={verdict['score']} {verdict['reason']}")
         return
 
-    # Stage 3 — CONTEXT: skill.txt + news angle, only once we know it's worth drafting
-    ctx = context.gather_context(fragment["text"])
+    # Stage 3 — CONTEXT (voice): skill.txt, only once we know it's worth drafting
+    ctx = context.gather_context(news)
     db.record_voice_skill_snapshot(ctx["skill_reference"])
 
     # Stage 5 — AI drafting

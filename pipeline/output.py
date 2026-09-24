@@ -19,17 +19,36 @@ def send_rejection(fragment: dict, verdict: dict) -> None:
     )
 
 
+def _sources_message(context: dict, draft: dict) -> str:
+    items = context.get("news_items") or []
+    if not items:
+        return "SOURCES: none found. The draft below rests on your note alone."
+
+    used = draft.get("news_item")
+    lines = [f'SOURCES CONSIDERED (Google News, search: "{context.get("search_phrase")}")', ""]
+    for i, item in enumerate(items, 1):
+        tag = "  [USED IN DRAFT]" if item is used else ""
+        lines += [f"{i}. {item['headline']}", f"   {item['source']}, {item['date']}{tag}", f"   {item['url']}", ""]
+    if not used:
+        lines.append("None of these fit naturally, so the draft doesn't cite any.")
+    return "\n".join(lines).rstrip()
+
+
 def send_draft(fragment: dict, claim: str, context: dict, draft: dict) -> int | None:
-    """Returns the sent Telegram message id, so it can be linked to the
-    drafts row for matching a later APPROVE/REJECT reply."""
+    """Sends the sources message first, then the draft. Returns the draft
+    message's Telegram id, so it can be linked to the drafts row for matching
+    a later APPROVE/REJECT reply. Sources go in their own message because
+    Telegram caps a message at 4096 characters."""
+    telegram_client.send_review_message(_sources_message(context, draft))
+
     lines = [
         "DRAFT READY FOR REVIEW",
         "",
         f"Fragment: {fragment['text']}",
         f"Claim: {claim}",
     ]
-    news = context.get("news")
-    lines.append(f"News angle used: {news['headline']}" if news and draft.get("used_news") else "News angle used: none")
+    news = draft.get("news_item")
+    lines.append(f"News angle used: {news['headline']} (sources listed above)" if news else "News angle used: none (sources listed above)")
     if draft.get("tone_tension_flag"):
         lines.append("")
         lines.append(f"⚠ VOICE/CONTENT TENSION: {draft['tone_tension_note']}")

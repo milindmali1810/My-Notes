@@ -29,8 +29,7 @@ def process_fragment(message: dict) -> None:
     draft = draft_stage.write_draft(fragment["text"], verdict["claim"], ctx)
 
     # Stage 6 — OUTPUT + MEMORY: hand back for review, record as pending, nothing auto-published
-    news = ctx.get("news") if draft.get("used_news") else None
-    draft_id = db.insert_draft(note_id, draft, news)
+    draft_id = db.insert_draft(note_id, draft, draft.get("news_item"))
     sent_message_id = output.send_draft(fragment, verdict["claim"], ctx, draft)
     if sent_message_id:
         db.set_draft_telegram_message_id(draft_id, sent_message_id)

@@ -4,11 +4,12 @@ Two independent lookups, both gathered before any drafting is attempted:
   a) skill.txt — read fresh every run, never cached, so edits take effect immediately.
   b) a relevant, current news item related to the note's topic: Gemini extracts
      3-5 search keywords, those keywords hit Google News' public RSS search
-     (no account or API key needed), and the top result is returned as a
-     structured item. If nothing comes back, that's recorded explicitly
-     rather than forcing a connection in the draft stage.
+     (no account or API key needed), and the top few results are returned as
+     structured items for the reviewer to judge. If nothing comes back, that's
+     recorded explicitly rather than forcing a connection in the draft stage.
 """
 import xml.etree.ElementTree as ET
+from email.utils import parsedate_to_datetime
 
 import requests
 from google import genai
@@ -40,9 +41,16 @@ def extract_keywords(fragment_text: str) -> str:
     return (response.text or "").strip()
 
 
-def fetch_top_news(search_phrase: str) -> dict | None:
+def _format_date(raw: str) -> str:
+    try:
+        return parsedate_to_datetime(raw).strftime("%d %b %Y")
+    except (TypeError, ValueError):
+        return raw
+
+
+def fetch_news(search_phrase: str, limit: int = 5) -> list[dict]:
     if not search_phrase:
-        return None
+        return []
     resp = requests.get(
         _NEWS_RSS_URL,
         params={"q": search_phrase, "hl": "en-US", "gl": "US", "ceid": "US:en"},
@@ -50,28 +58,28 @@ def fetch_top_news(search_phrase: str) -> dict | None:
     )
     resp.raise_for_status()
     root = ET.fromstring(resp.content)
-    item = root.find("./channel/item")
-    if item is None:
-        return None
 
-    raw_title = (item.findtext("title") or "").strip()
-    # Google News RSS titles are formatted "Headline - Source Name"
-    if " - " in raw_title:
-        headline, source = raw_title.rsplit(" - ", 1)
-    else:
-        headline, source = raw_title, "Google News"
-
-    return {
-        "headline": headline.strip(),
-        "source": source.strip(),
-        "date": (item.findtext("pubDate") or "").strip(),
-        "url": (item.findtext("link") or "").strip(),
-    }
+    items = []
+    for item in root.findall("./channel/item")[:limit]:
+        raw_title = (item.findtext("title") or "").strip()
+        # Google News RSS titles are formatted "Headline - Source Name"
+        if " - " in raw_title:
+            headline, source = raw_title.rsplit(" - ", 1)
+        else:
+            headline, source = raw_title, "Google News"
+        items.append({
+            "headline": headline.strip(),
+            "source": source.strip(),
+            "date": _format_date((item.findtext("pubDate") or "").strip()),
+            "url": (item.findtext("link") or "").strip(),
+        })
+    return items
 
 
 def gather_context(fragment_text: str) -> dict:
     keywords = extract_keywords(fragment_text)
     return {
         "skill_reference": read_skill_file(),
-        "news": fetch_top_news(keywords),
+        "search_phrase": keywords,
+        "news_items": fetch_news(keywords),
     }

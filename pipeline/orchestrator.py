@@ -22,7 +22,7 @@ def process_fragment(message: dict) -> None:
         news = context.find_news(fragment["text"])
     except Exception as exc:
         print(f"[news lookup failed] {exc}")
-        news = {"search_phrase": "", "news_items": []}
+        news = {"crux": "", "search_queries": [], "news_items": []}
 
     if not verdict["passed"]:
         output.send_rejection(fragment, verdict, news)

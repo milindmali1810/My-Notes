@@ -32,7 +32,8 @@ PROJECT_DIR = Path(__file__).parent
 # your local skill.txt).
 _BUNDLED_SKILL_PATH = PROJECT_DIR / "skill.txt"
 _LOCAL_DEFAULT_SKILL_PATH = r"D:\Mesa\AI WORKFLOWS\skill.txt"
-SKILL_PATH = Path(os.environ.get("SKILL_PATH", str(_BUNDLED_SKILL_PATH if IS_SERVERLESS else _LOCAL_DEFAULT_SKILL_PATH)))
+_use_bundled = IS_SERVERLESS or not Path(_LOCAL_DEFAULT_SKILL_PATH).exists()
+SKILL_PATH = Path(os.environ.get("SKILL_PATH", str(_BUNDLED_SKILL_PATH if _use_bundled else _LOCAL_DEFAULT_SKILL_PATH)))
 
 STATE_DIR = PROJECT_DIR / "state"
 OFFSET_FILE = STATE_DIR / "telegram_offset.json"

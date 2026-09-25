@@ -1,0 +1,6 @@
+.env
+.env.local
+.env.example
+state/
+__pycache__/
+.git

@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Telegram to LinkedIn Pipeline</title>
+<meta name="description" content="A staged pipeline that turns raw Telegram notes into LinkedIn post drafts, for manual review. Nothing is ever posted automatically.">
+<style>
+  :root { --bg:#0f1115; --card:#181b22; --text:#e8eaf0; --muted:#9aa1b0; --accent:#4da3ff; --border:#262b36; }
+  @media (prefers-color-scheme: light) {
+    :root { --bg:#f6f7f9; --card:#fff; --text:#161a22; --muted:#5b6474; --accent:#0a66c2; --border:#e1e4ea; }
+  }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--text); font:16px/1.6 system-ui,-apple-system,Segoe UI,Roboto,sans-serif; }
+  main { max-width:820px; margin:0 auto; padding:56px 16px 72px; }
+  h1 { font-size:clamp(28px,5vw,40px); line-height:1.15; margin:0 0 12px; }
+  h2 { font-size:20px; margin:44px 0 14px; }
+  p.lead { color:var(--muted); font-size:18px; margin:0 0 20px; }
+  .badge { display:inline-block; border:1px solid var(--accent); color:var(--accent); border-radius:999px; padding:2px 12px; font-size:13px; margin-bottom:16px; }
+  .steps { list-style:none; padding:0; margin:0; display:grid; gap:10px; }
+  .steps li { background:var(--card); border:1px solid var(--border); border-radius:10px; padding:14px 16px; display:flex; gap:14px; }
+  .n { flex:none; width:28px; height:28px; border-radius:50%; background:var(--accent); color:#fff; font-weight:600; display:grid; place-items:center; font-size:14px; }
+  .steps b { display:block; }
+  .steps span { color:var(--muted); font-size:15px; }
+  .grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(230px,1fr)); gap:10px; }
+  .card { background:var(--card); border:1px solid var(--border); border-radius:10px; padding:14px 16px; }
+  .card b { display:block; margin-bottom:4px; }
+  .card span { color:var(--muted); font-size:15px; }
+  code { background:var(--card); border:1px solid var(--border); border-radius:6px; padding:1px 6px; font-size:14px; }
+  footer { margin-top:48px; color:var(--muted); font-size:14px; }
+</style>
+</head>
+<body>
+<main>
+  <span class="badge">Human in the loop</span>
+  <h1>Telegram &rarr; LinkedIn draft pipeline</h1>
+  <p class="lead">Jot a raw note in a Telegram channel. The pipeline filters it hard, and only if it's worth posting, drafts it in your voice with a fresh news angle and sends it back to you on Telegram for review.</p>
+  <p><b>Nothing is ever posted to LinkedIn automatically.</b> There is no LinkedIn integration in the code, so there is nothing that could publish on its own.</p>
+
+  <h2>How it works</h2>
+  <ol class="steps">
+    <li><div class="n">1</div><div><b>Trigger</b><span>Telegram calls the webhook whenever a new post lands in the source channel.</span></div></li>
+    <li><div class="n">2</div><div><b>Input</b><span>The raw fragment is logged as-is with a timestamp. No cleanup.</span></div></li>
+    <li><div class="n">3</div><div><b>Context</b><span>Reads your voice guide (<code>skill.txt</code>), finds the crux of the note, and pulls relevant recent news with sources.</span></div></li>
+    <li><div class="n">4</div><div><b>Filter</b><span>A strict scoring pass. Most fragments fail, and that is the pipeline working as intended.</span></div></li>
+    <li><div class="n">5</div><div><b>Draft</b><span>Only fragments that pass get a LinkedIn draft, written in your voice around a news angle.</span></div></li>
+    <li><div class="n">6</div><div><b>Review &amp; memory</b><span>The draft (or the rejection, with sources) is DMed to you. Reply APPROVE or REJECT and the decision is stored in Supabase.</span></div></li>
+  </ol>
+
+  <h2>Built with</h2>
+  <div class="grid">
+    <div class="card"><b>Telegram Bot API</b><span>Channel posts in, review messages out.</span></div>
+    <div class="card"><b>Gemini</b><span>Scoring, crux extraction and drafting.</span></div>
+    <div class="card"><b>Supabase</b><span>Memory of approved and rejected drafts.</span></div>
+    <div class="card"><b>Flask on Vercel</b><span>Serverless webhook at <code>/api/webhook</code>.</span></div>
+  </div>
+
+  <h2>Guardrails</h2>
+  <div class="grid">
+    <div class="card"><b>Manual publishing only</b><span>You copy and post every draft yourself.</span></div>
+    <div class="card"><b>Strict filter</b><span>A high rejection rate is expected and intentional.</span></div>
+    <div class="card"><b>Tone conflicts flagged</b><span>Voice mismatches are surfaced in the review, never smoothed away.</span></div>
+  </div>
+
+  <footer>Webhook health check: <code>/api/webhook</code></footer>
+</main>
+</body>
+</html>
